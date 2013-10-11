@@ -1,0 +1,75 @@
+<html>
+<head>
+<title>Introduction</title>
+</head>
+
+<body>
+<!--
+<body bgcolor="#D7CDC8">
+-->
+
+<table border="2" cellpadding="10" width=100%>
+<tr align=center>
+  <td><a href="../index.html">Yaak Home</a></td>
+  <td><a href="./YaakTutorial.html">Yaak Tutorial</a></td>
+  <td><a href="./api/index.html">Yaak API Docs</a></td>
+  <td><a href="./Introduction.html">Previous: (none)</a></td>
+  <td><a href="./YaakAgentContexts.html">Next: Agent Contexts</a></td>
+</tr>
+</table>
+
+<h3>Introduction</h3>
+
+<p>The <a href="./Overview.html">Overview</a> is a prerequisite for this tutorial.</p>
+
+<p>In today's network-oriented computing environments it is common to find applications that distribute their workload over multiple hosts, for example, network-aware PCs and UNIX workstations.  In some cases, distributed applications are composed of tightly knit components, each component capable of residing on any arbitrary host that provides the requisite services.  For example, a data collection module residing on each satellite-monitoring workstation that collects and feeds data to a coordinating application for synthesis.</p>
+
+<p>In other cases, a system of loosely knit applications work together to provide a single (point of) interface for an application or a user.  For example, an end-user working from a web browser interface could perform data entry via a servlet that communicates with an application server, which in turn manages multiple databases residing on multiple database servers from several database vendors.</p>
+
+<p>Distributed sensor networks are another example where lightweight agent are necessary.  With modern sensor systems, especially Micro Electro-Mechanical Systems- (MEMS-)based sensors, it is now possible to distributed thousands of sensors over a geographic area for sampling environmental conditions, surveillance for weapons of mass destruction (WMD), and other monitoring activities.  In these scenarios, each sensor occupies a node in a network and, in many cases, has the computing capacity for network communications.  Even with the smallest of sensors, which have limited computing capabilities, they still have the capability for sending data and receiving commands, either via radio frequency (RF) or optical (laser) transmission media.</p>
+
+<p>In the past, distributed application components were often implemented in traditional languages such as C or C++ as executable files or shared object-code libraries.  Implementing application components as machine-dependent binary modules is problematic because it forces developers and system administrators to deal with a whole range of issues:</p>
+
+<ul>
+<li>Portability of application components
+<li>Interoperability of components developed with different programming languages
+<li>Data communication/exchange across multiple machine architectures
+<li>Rogue modifications to binary modules that compromise security
+</ul>
+
+<p>Since the late 1990s, Java has become tremendously popular as a development language for distributed application components for several reasons:</p>
+
+<ul>
+<li>Highly modular, dynamic, class-oriented compilation units
+<li>Portability of compiled code (class files)
+<li>On-demand loading of functionality
+<li>JDBC-related portability across database vendors
+<li>Fine-grained and very configurable security control
+<li>Built-in support for low-level network programming
+<li>URL-related classes and interfaces
+<li>Extensible URL support for custom protocols
+</ul>
+
+<p>With Java's support for low-level network socket programming, as well as high-level URL support for common protocols such as FTP, HTTP, and TELNET, it is straightforward to design application components that communicate over the network.  More importantly, however, Java supports programmer-defined content and protocol handlers.  This framework for alternate communication protocols facilitates new communication models that were not envisioned when Java was created, as well as application-specific communication protocols, both of which essentially plug into the existing URL-oriented framework.  This flexibility facilitates network communication that is not bound by highly structured communication protocols such as remote method invocation (RMI), which is more suitable for traditional client-server designs.</p>
+
+<p>With application components interoperating from different network hosts, efficient task distribution and communication become very important.  In lieu of distributed components communicating over the network, in some cases it makes more sense to transport an application component to a remote location, have it perform it work, and then either return or dispose of itself.  That is, at times mobile components are more suitable than static components.  These components could operate on behalf of a coordinating component at another site.</p>
+
+<p>In the past, several agent frameworks (including the Taco framework) supported mobile agents.  More recently, however, especially with advancements in modern application programming interfaces (APIs), a messaging-oriented agent paradigm is preferable, largely because it is infinitely flexible and subsumes the types of operations handled via mobile agents.  That is, the messages (their payload) can be any object; thus, these objects could represent operational functionality that is transported via an application-defined messaging protocol for mobile functionality.</p>
+
+<p>There are several APIs that support component mobility and provide the appropriate frameworks and protocols for developing what are commonly called mobile agents.  Mobile agent technologies support common solutions to implementing cooperating, distributed application components.  Just as a graphical toolkit is useful for developing multiple graphical applications, a mobile agent framework facilitates the development of multiple distributed applications, as well as the ongoing enhancement of existing distributed applications.  As mentioned, Yaak's predecessor supported mobile agents; Yaak does not.</p>
+
+<p>The Aglet Software Development Kit (ASDK) was (and still is) a moderately lightweight mobile agent technology from <a href="http://www.trl.ibm.com/aglets/">IBM's Tokyo Research Laboratory</a>.  With aglets, it is straightforward to develop standalone distributed applications.  For more information on one of the early agent frameworks see the <a href="http://aglets.sourceforge.net">Aglets Portal</a>.  The Taco framework, as well as Yaak, were inspired by the Aglets API.  And, although there are some similarities at the API level, this family of frameworks was developed independent of the Aglets effort (long before the release of the Aglets source code as an open-source effort).</p>  
+
+<p>While the Yaak API is similar to the Aglets API for basic agent life-cycle operations, Yaak's philosophy is entirely different.  In particular, it provides much more control over behavioral operations, concurrency of agent operations, and other tasks, as mentioned in the overview.  Perhaps, most importantly, however, Yaak's communications model is completely different from the Aglets communications model.</p>
+
+<hr>
+<ul>
+<li><a href="./Introduction.html">Previous:  (none)</a>
+<li><a href="./YaakAgentContexts.html">Next:  Agent Contexts</a>
+</ul>
+
+<hr>
+<b><a href="../License.html">The Yaak Framework Software License</a></b>
+
+</body>
+</html>

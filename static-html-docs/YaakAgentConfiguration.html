@@ -1,0 +1,182 @@
+<html>
+<head>
+<title>Configurable Agents</title>
+</head>
+
+<body>
+<!--
+<body bgcolor="#D7CDC8">
+-->
+
+<table border="2" cellpadding="10" width=100%>
+<tr align=center>
+  <td><a href="../index.html">Yaak Home</a></td>
+  <td><a href="./YaakTutorial.html">Yaak Tutorial</a></td>
+  <td><a href="./api/index.html">Yaak API Docs</a></td>
+  <td><a href="./YaakAgents.html">Previous: Agents</a></td>
+  <td><a href="./YaakAgentMessaging.html">Next: Agent Messaging</a></td>
+</tr>
+</table>
+
+<h3>Configurable Agents</h3>
+
+<p>An earlier section, <a href="./YaakAgents.html#AgentInitialization">Agent Creation and Initialization Arguments</a>, describes two processes:</p>
+
+<ul>
+<li>Passing initialization data to an agent during creation
+<li>The <code>onCreation()</code> method, which is executed upon agent creation</p>
+</ul>
+
+<p>The protocol is quite simple.  First, the initialization data is passed as the second argument to <code>createAgent()</code>:</p>
+
+<pre>
+    agent = (MyTestAgent) context.createAgent(MyTestAgent.class,
+      "1234", "TheAgent");
+</pre>
+
+<p>Next, the agent's <code>onCreation()</code> method makes a domain-specific interpretation of the data:</p>
+
+<pre>
+  public class MyTestAgent extends Agent {
+    ...
+    public void onCreation(Object args) {
+      int keyCode = Integer.parseInt((String) args);
+      // do something...
+    }
+    ...
+  }
+</pre>
+
+<p>In this case, the data is assumed to be a string representation of some keycode, or passcode, that can be converted to an integer.  As mentioned, the argument can be anything, for example, a vector of data, a map--anything.  Of course, this is a form of weak (relaxed?) data typing, in lieu of Java's typically strong type checking.</p>
+
+<p>This initialization protocol is roughly akin to passing initialization data via a class constructor during object instantiation.  Each agent class can be expected to manage unique internal state, part of which requires initialization during start-up operations.  In this case, each agent class that extends <code>Agent</code> handles this initialization uniquely.  More importantly, each agent instance obtains its uniqueness, in part, via this start-up data.  Thus, the <code>onCreation()</code> design pattern supports a form of dependency injection that is very similar to, but more flexible than, constructor injection. See <a href="http://martinfowler.com/articles/injection.html">Inversion of Control Containers and the Dependency Injection Pattern</a>.</p>
+
+<p>Thus, on the agent end of the initialization protocol, the <code>onCreation()</code> method provides an (agent) class-wide execution sequence that performs common start-up operations <em>leveraging</em> each agent's potentially unique state data.</p>
+
+<p>As part of the agent contract (and overall agent design pattern), Yaak provides a supplemental form of agent configuration based on Java's property construct.  Note that an agent, like any POJO, can use setter injection, as described in <a href="http://martinfowler.com/articles/injection.html">Martin Fowler's article</a> above.  The agent contract, however, provides an alternative approach that blends constructor injection with property-based setter injection.  Specifically, Yaak provides an alternative base class for agents, namely, <code>ConfigurableAgent</code>.  This class differs in that the argument to <code>onCreation()</code> must be of type <code>java.util.Properties</code>; otherwise, <code>onCreation()</code> throws an instance of <code>IllegalArgumentException</code>.</p>
+
+<p><code>ConfigurableAgent</code> then uses Java reflection to search the inheritance hierarchy for fields (state variables) that match each property name, setting the (agent) instance variable's value to the specified property value.  The initialization process supports the following data types:</p>
+
+<ul>
+<li>int
+<li>float
+<li>double
+<li>boolean
+<li>String
+</ul>
+
+<p>The keys in the <code>Properties</code> object must conform to the following conventions:</p>
+
+<ul>
+  <li>Keys have the same name as the agent instance variable, except
+  <li>Key names are appended with <code>"AsXXX"</code>, where <code>"XXX"</code> is one of the following (case sensitive):
+  <ul>
+  <li>Int
+  <li>Float
+  <li>Double
+  <li>Boolean
+  <li>String
+  </ul>
+</ul>
+
+<p>Note that this initialization process works for any specialization of <code>ConfigurableAgent</code>.</p>
+
+<p>There are many application-specific ways to establish the key-value pairs stored in the <code>Properties</code> object.  Note that the Yaak framework provides a class, <code>yaak.core.YaakProperties</code>, which reads properties from arbitrarily named files anywhere in the classpath, for example,</p>
+
+<pre>
+    YaakProperties yaakProps = new YaakProperties("myagent.properties");
+</pre>
+
+<p>Hence, to initialize an application-specific collection of agents (specializations of <code>ConfigurableAgent</code>), simply (1) create a configuration directory, (2) add it to the classpath, and (3) create and then read the agent-specific properties files on demand during agent creation.  For clarity and ongoing code maintenance, property files should be created for each agent, and the logical agent names and property filenames should match, although the latter is not required.</p>
+
+<p>As an example, consider the following agent class definition (from the
+unit-test hierarchy):</p>
+
+<pre>
+  public class MyConfigurableAgent extends ConfigurableAgent {
+    private boolean v;
+    private int w;
+    private float x;
+    private double y;
+    private String z = "none";
+
+    public boolean getV() {
+      return v;
+    }
+
+    public int getW() {
+      return w;
+    }
+
+    public float getX() {
+      return x;
+    }
+
+    public double getY() {
+      return y;
+    }
+
+    public String getZ() {
+      return z;
+    }
+  }
+</pre>
+
+<p>Agents, like other objects, could follow the JavaBean protocol for providing get and set access methods (getters and setters).  Here, we eliminate the setters, as well as Javadoc comments for brevity.</p>
+
+<p>Next, assume that the configuration directory for the application's software distribution (which would likely be part of the application's classpath setting) includes the file <code>myConfigurableAgent.properties</code>, which contains:</p>
+
+<pre>
+vAsBoolean=true
+wAsInt=40
+xAsFloat=60
+yAsDouble=80
+zAsString=zzz...
+</pre>
+
+<p>Thus, <code>v</code>, <code>w</code>, <code>x</code>, <code>y</code>, and <code>z</code> would be initialized to the respective values from the property file.  Note that the developer does not have to provide any property-handling code within the agent class definition--that functionality is inherited from <code>ConfigurableAgent</code>.</p>
+
+<p>Of course, the developer must somehow create the property object and pass it during the agent's creation.  Although there are many mechanisms for establishing an instance of <code>java.util.Properties</code>, the following approach is taken from unit-test <code>yaak.test.agent.TestAgentConfiguration.java</code>:
+
+<pre>
+  ...
+  public void testConfiguration() {
+    try {
+      YaakProperties yaakProps =
+        new YaakProperties("myConfigurableAgent.properties");
+      yaakProps.load();
+      Properties props = yaakProps.getProperties();
+      agent = (MyConfigurableAgent)
+        context.createAgent("yaak.test.agent.MyConfigurableAgent",
+        (Object) props, "MyConfigurableAgent");
+    }
+    catch (AgentException e) {
+      fail("Exception creating and/or configuring agent.");
+    }
+    assertEquals("'v' has been set properly.",
+      agent.getV(), true);
+    assertEquals("'w' has been set properly.",
+      agent.getW(), 40);
+    assertTrue("'x' has been set properly.",
+      Math.abs(agent.getX() - 60.0) < 0.01);
+    assertTrue("'y' has been set properly.",
+      Math.abs(agent.getY() - 80.0) < 0.01);
+    assertEquals("'z' has been set properly.",
+      agent.getZ(), "zzz...");
+  }
+  ...
+</pre>
+
+<p>Within the <code>try</code> block, note that only four statements are necessary to establish the property object, load the values, and pass the properties as an argument during agent creation.</p>
+
+<hr>
+<ul>
+<li><a href="./YaakAgents.html">Previous:  Agents</a>
+<li><a href="./YaakAgentMessaging.html">Next:  Agent Messaging</a>
+</ul>
+
+<hr>
+<b><a href="../License.html">The Yaak Framework Software License</a></b>
+
+</body>
+</html>

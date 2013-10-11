@@ -1,0 +1,153 @@
+<html>
+<head>
+<title>Agent Contexts</title>
+</head>
+
+<body>
+<!--
+<body bgcolor="#D7CDC8">
+-->
+
+<table border="2" cellpadding="10" width=100%>
+<tr align=center>
+  <td><a href="../index.html">Yaak Home</a></td>
+  <td><a href="./YaakTutorial.html">Yaak Tutorial</a></td>
+  <td><a href="./api/index.html">Yaak API Docs</a></td>
+  <td><a href="./Introduction.html">Previous: Introduction</a></td>
+  <td><a href="./YaakAgents.html">Next: Agents</a></td>
+</tr>
+</table>
+
+<h3>Agents and Agent Contexts</h3>
+
+<p>As mentioned in the overview, agents are not instantiated with the Java <code>new</code> operator.  Instead, an agent context is requested from Yaak's system services (consistent with the common factory design pattern):</p>
+
+<pre>
+    jupiter = AgentSystem.createAgentContext("Jupiter");
+</pre>
+
+<p>Given an agent context, a developer can then instantiate agents of related functionality, thereby grouping agents by contexts, similar to the use of containers such as arrays, lists, and tables with programming languages.  For example, offshore oil and gas platforms have many sensors.  A Yaak-based distributed application for monitoring oil and gas platforms could instantiate one or more agent contexts per platform, each context managing that platform's agents, which in turn interact with or monitor the platform's sensors.  Note that an agent context provides many ancillary services, for example, storing and retrieving context-level decorations, requesting a list of all agents in the context by <code>AgentID</code>, and other tasks.</p>
+
+<p>Creating an agent typically requires only a single line of code, comparable to using the new operator with Java:</p>
+
+<pre>
+    metis = jupiter.createAgent(MoonAgent.class, "Metis");
+    adrastea = jupiter.createAgent(MoonAgent.class, "Adrastea");
+</pre>
+
+<p>The first argument is either a classname as a string or a class literal for the agent class, which must specialize <code>yaak.agent.Agent</code>.  The class literal is preferred because it provides compile-time checking of the (spelling) of the classname.  String-specified classnames are useful for dynamically formulating classnames at runtime from similarly named agent classes.  The second argument is the logical name for the agent (instance).  In the previous example, there are two instances of the <code>MoonAgent</code> class, namely, <code>Metis</code> and <code>Adrastea</code>.  Logical agent names are in part useful for developer readability, but are also used for naming an agent that is the intended recipient/target of an agent message, for example,</p>
+
+<pre>
+    try {
+      metis.sendMessage("Adrastea@Jupiter",
+        new Message("How are things going on your side of Jupiter?"));
+    }
+    catch (CommunicationException e) {
+      ...
+    }
+</pre>
+
+<p>Note that the object identifier, in this case, <code>metis</code>, is used to send a message, but the recipient is expressed as an agent address, which can be either a string in the form <code>"[agent]@[context]"</code>, as in the previous example, or an instance of <code>AgentAddress</code>.</p>
+
+<p>As mentioned, the agent context will only instantiate agent classes that extend <code>yaak.agent.Agent</code>.  That is, in the previous code segment, <code>MoonAgent</code> must extend/specialize <code>yaak.agent.Agent</code>.</p>
+
+<p>An application can create multiple agent contexts, each housing multiple agents, and thus group agent-related functionality based on application domain-specific demands.  Also, agent contexts can be nested.  The nesting of contexts is especially useful for life-cycle-related issues, for example, disposing of everything related to a particular context, which could include other contexts.  The following code segment creates a heterogeneous parent context (managing both an agent and a subordinate context).  First, create the parent context and add an agent:</p>
+
+<pre>
+    AgentContext parent = null, child = null;
+    Agent agent1, agent2;
+    parent = AgentSystem.createAgentContext("Parent");
+    assertEquals("Parent", parent.getContextName());
+    try {
+      agent1 = parent.createAgent("yaak.test.agent.MyTestAgent", "Agent1");
+      assertEquals("Agent1", agent1.getAgentName());
+    }
+    catch (AgentException e) {
+      ...
+    }
+</pre>
+
+<p>The <code>assert...</code> operations are for unit testing and reveal that these code segments are extracted from the <code>test</code> package in the Yaak source distribution.  The assert operations have been left in place because they illustrate additional functionality, for example, queries against an agent or context such as getting a context's name or an agent's name.  Normally, of course, the assert operations would be absent from the core application code.</p>
+
+<p>Next, create the subordinate context:</p>
+
+<pre>
+    try {
+      child = AgentSystem.createAgentContext(parent, "Child");
+    }
+    catch (AgentException e) {
+      ...
+    }
+</pre>
+
+<p>This code segment uses a <code>createAgentContext()</code> method with a different signature.  The first argument is the parent; but with this method signature, the second argument provides the context name.</p>
+
+<p>The next code segment verifies that the parent contains two agents, the application-defined agent (<code>Agent1</code>), plus the child context (<code>Child</code>), which is also an agent:</p>
+
+<pre>
+    AgentID[] ids = parent.getAgentIDs();
+    assertTrue("There are two agents in the parent.", ids.length == 2);
+</pre>
+
+<p>The next code segment adds an agent to the child context and illustrates setting the agent name after agent creation.</p>
+
+<pre>
+    try {
+      agent2 = child.createAgent("yaak.test.agent.MyTestAgent");
+      agent2.setAgentName("Agent2");
+      assertEquals("Agent2", agent2.getAgentName());
+    }
+    catch (AgentException e) {
+      ...
+    }
+</pre>
+
+<p>The next code segment illustrates context disposal:</p>
+
+<pre>
+    //  child.dispose(); // unnecessary--automatically disposed of via parent
+      parent.dispose();
+    }
+</pre>
+
+<p>Note that agents and contexts can be disposed of separately, and individually, as required by the distributed application application.</p>
+
+<h3>Agent Context Decoration</h3>
+
+<p>As mentioned, an agent context can manages decorations.  This facility provides a primitive per-context whiteboard capability.  The decoration can be any application-related content.  These whiteboard-related decorations provide a form of quasi-global data, and thus should be used "with discretion" and "at your own risk!"  The following code segment illustrates decorations:</p>
+
+<pre>
+    agent1 = parent.createAgent("yaak.test.agent.MyTestAgent", "Agent1");
+    ...
+    String key1 = "DecorationOne";
+    String key2 = "DecorationTwo";
+    String value1 = "ValueforDecorationOne";
+    String value2 = "ValueforDecorationTwo";
+    context.putDecoration(key1, value1);
+    context.putDecoration(key2, value2);
+    assertEquals((String) context.getDecoration(key1), value1);
+    assertEquals((String) context.getDecoration(key2), value2);
+    assertTrue("There are two decorations.",
+      ((Map) context.getDecorations()).size() == 2);
+    agent1.listDecorations();
+</pre>
+
+<p>Any application that creates agent contexts (and agents within those contexts) has a reference for the context; hence, it can manipulate context decoration.  On the other hand, agents (which, by definition, extend <code>Agent</code>) do not have access to the context that manages them.  The fact that agents do not know "where they live" is rather important and prevents a developer from designing agents that are dependent (in a dynamic runtime sense) on a particular agent context.  Thus, if agents themselves (not the agent-creating application) want to use context decorations, the decorations must be accessible.  <code>Agent</code> provides this access via <code>getContextDecorations()</code>, which has the signature:</p>
+
+<pre>
+  protected final Map getContextDecorations();
+</pre>
+
+<p>Thus, <code>Agent</code> class specializations can manipulate decorations as part of their implementation logic, thereby, sharing decoration among agents of the same and different agent class implementations.  Note that the <code>protected</code> modifier provides this access for all agents, while the <code>final</code> modifier prevents user-defined agent classes from modifying this behavior.</p>
+
+<hr>
+<ul>
+<li><a href="./Introduction.html">Previous:  Introduction</a>
+<li><a href="./YaakAgents.html">Next:  Agents</a>
+</ul>
+
+<hr>
+<b><a href="../License.html">The Yaak Framework Software License</a></b>
+
+</body>
+</html>

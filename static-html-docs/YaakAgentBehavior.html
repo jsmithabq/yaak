@@ -1,0 +1,127 @@
+<html>
+<head>
+<title>Agent Behavior</title>
+</head>
+
+<body>
+<!--
+<body bgcolor="#D7CDC8">
+-->
+
+<table border="2" cellpadding="10" width=100%>
+<tr align=center>
+  <td><a href="../index.html">Yaak Home</a></td>
+  <td><a href="./YaakTutorial.html">Yaak Tutorial</a></td>
+  <td><a href="./api/index.html">Yaak API Docs</a></td>
+  <td><a href="./YaakAgentMessaging.html">Previous: Agent Messaging</a></td>
+  <td><a href="./YaakActionsAndGroups.html">Next: Actions</a></td>
+</tr>
+</table>
+
+<h3>The Agent Execution Model</h3>
+
+<p>Recall the agent interaction model illustrated in the <a href="./Overview.html">Overview</a>:</p>
+
+<center>
+  <br>
+  <img border="0" src="./images/Concurrency.gif" align="middle">
+  <h4>Concurrent Operations with Yaak</h4>
+  <br>
+</center>
+
+<p>The agent messaging model provides a mechanism for asynchronous coordination of executing agent tasks, but what about the actual implementation and management of agent operations?  Because Yaak is a pure Java agent framework, it would be straightforward to encode agent operations by simply creating subordinate classes that implement various tasks.  This approach, however, becomes both tedious and laborious with increasing application complexity.  Moreover, with complex, <em>distributed</em> interaction scenarios it becomes almost mandatory to have higher level control structures.</p>
+
+<p>Earlier frameworks have used a variety of approaches to controlling executable tasks, including hierarchical task analysis via structures supporting traditional hierarchical task networks (HTNs).  Yaak deviates from earlier frameworks by providing several execution-related strategies that can be combined in a variety of ways:</p>
+
+<ol>
+<li>Overriding the <code>execute()</code> method of the base class <code>Agent</code>
+<li>Implementing an agent behavior class
+<li>Partitioning agent operations into actions and action groups
+<li>Placing executable agents under the control of a discrete event scheduler
+</ol>
+
+<p>Note that approach #2 works in concert with #1.  Also, approach #4 typically utilizes approach #3.  Thus, a developer can leverage as much of Yaak's execution model as necessary to solve application-specific tasking requirements.  This section introduces the execution model for <code>Agent</code>, plus the  <code>AgentBehavior</code> interface.</p>
+
+<p><code>Agent</code> implements <code>java.io.Serializable</code>, which means that it provides a <code>run()</code> method.  It is possible to directly override  <code>run()</code> with application-specific functionality and then execute the code, for example</p>
+
+<pre>
+    Agent agent = new Agent() {
+      public void run() {
+        System.out.println("Do something!");
+      }
+    };
+    agent.run(); // for inline synchronous execution
+    // or
+    new Thread(agent).start(); // for asynchronous/parallel execution
+</pre>
+
+<p>This approach, however, ignores Yaak's execution paradigm and forces the application to manually manage potentially many executable tasks.</p>
+
+<p>Minimally, a more correct approach is to override <code>Agent.execute()</code>, which, by default, is empty.</p>
+
+<pre>
+    Agent agent = new Agent() {
+      public void execute() {
+        System.out.println("Do something!");
+      }
+    };
+    agent.run(); // for inline synchronous execution
+    // or
+    new Thread(agent).start(); // for asynchronous/parallel execution
+</pre>
+
+<p>On the surface these approaches appear equivalent; the latter approach, however, allows <code>run()</code> to perform its standard protocol, namely</p>
+
+<ul>
+<li>Execute the agent's <code>onExecute()</code> method
+<li>Execute the agent's <code>execute()</code> method
+<li>Execute the agent's <code>onFinish()</code> method
+</ul>
+
+<p>The added functionality is minimal, but it supports the use of set-up and tear-down (clean-up) operations relative to each agent execution.  Of course, this functionality is not necessary for many execution scenarios.</p>
+
+<h3>The Agent Behavior Model</h3>
+
+<p>The next potential level of organization comes from implementing the actual execution behavior elsewhere, that is, outside the <code>execute()</code> method, specifically, by implementing <code>AgentBehavior</code>.  This class could be quite simple, or it could be the "entry point" for a complex collection of classes that implement the agent's behavior.</p>
+
+<p>The next code segment demonstrates the mechanics of using <code>AgentBehavior</code>:</p>
+
+<pre>
+    class SpecialBehavior implements AgentBehavior {
+      public void execute() {
+        // perform behavior (operations)
+      }
+    }
+    ...
+    Agent agent = context.createAgent(AnyAgent.class);
+    ...
+    agent.setAgentBehavior(new SpecialBehavior());
+    ...
+    new Thread(agent).start();
+</pre>
+
+<p><code>Agent.setAgentBehavior()</code> installs the specialized behavior for the target agent.  With this approach, <code>Agent.execute()</code> should remain unmodified (not overridden).  Its default behavior is to check for the existence of a registered <code>AgentBehavior</code> instance and, if present, execute <code>AgentBehavior.execute()</code>.  Otherwise, <code>Agent.execute()</code> does nothing and terminates.  It is important to neot that overriding <code>Agent.execute()</code>, as in the earlier code segment, completely replaces the potential use of a registered <code>AgentBehavior</code> instance.</p>
+
+<p>Earlier sections have stressed that Yaak does not automaticlaly associate a (Java) thread with each agent, primarily from the performance perspective.  Another point, however, is that by separating the definition of executable agent tasks from the execution process, it is straightforward to alter an agent's behavior dynamically.  That is, after updating an agent's behavior on the fly, the agent can be re-executed, because the agent is not bound by an internal thread's executable state.  Each agent encapsulates only its internal state and its methods, independent of any Java thread of execution.  This dynamic, ever-varying executing model is quite powerful in complex applications.
+
+<p>Yaak also provides a placeholder implementation of an executor, <code>yaak.concurrent.DefaultExecutor</code>, which an application can extend to provide custom start-up operations.  The default executor simply creates a thread and starts it, as in the previous code segments:</p>
+
+<pre>
+    public void execute(Runnable runnable) {
+      new Thread(runnable).start();
+    }
+</pre>
+
+<p>Minimally, the Yaak agent execution model provides a mechanism and the mechanics for defining agent operations ensapsulated within each agent, instead of littering the landscape with complex dependencies among <code>Runnable</code> POJOs.  While this approach assists developers in organizing high-level operations at the agent level, it provides no assistance for mixed concurrency scenarios involving arbitrary levels of per-agent sequentially and concurrently executing operational sequences.  The next section addresses groups of tasks and factoring of execution scenarios.</p>
+
+<hr>
+<ul>
+<li><a href="./YaakAgentMessaging.html">Previous:  Agent Messaging</a>
+<li><a href="./YaakActionsAndGroups.html">Next:  Actions</a>
+</ul>
+
+<hr>
+<b><a href="../License.html">The Yaak Framework Software License</a></b>
+
+</body>
+</html>

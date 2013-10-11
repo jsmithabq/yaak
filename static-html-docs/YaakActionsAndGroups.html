@@ -1,0 +1,235 @@
+<html>
+<head>
+<title>Actions and Action Groups</title>
+</head>
+
+<body>
+<!--
+<body bgcolor="#D7CDC8">
+-->
+
+<table border="2" cellpadding="10" width=100%>
+<tr align=center>
+  <td><a href="../index.html">Yaak Home</a></td>
+  <td><a href="./YaakTutorial.html">Yaak Tutorial</a></td>
+  <td><a href="./api/index.html">Yaak API Docs</a></td>
+  <td><a href="./YaakAgentBehavior.html">Previous: Agent Behavior</a></td>
+  <td><a href="./YaakWorldModel.html">Next:  Agent World Model</a></td>
+</tr>
+</table>
+
+<h3>Actions</h3>
+
+<p>Actions provide a way of introducing order both within each individual agent and across cooperating agents hosted within multiple distributed application components.  An <code>Action</code> instance is easily define via an anonymous class:</p>
+
+<pre>
+    action1 = new Action() {
+      public void execute() {
+        System.out.println("action 1...");
+      }
+    };
+</pre>
+
+<p>Although a task could be arbitrarily complex, executing large uninterrupted operations does not support highly interactive (distributed) computing scenarios that must be interrupted, or paused and resumed, based on dynamically changing conditions.  In general, agent operations should be factored into small tasks, which are then coded as actions.  These small tasks should represent "logical execution units" within the application domain.</p>
+
+<h3>Action Groups</h3>
+
+<p>Related actions can be combined within an action group.  There are several ways to group actions together.  For convenience, <code>ActionGroup</code> provides public constructors with the following signatures:</p>
+
+<pre>
+    ActionGroup();
+    ActionGroup(List actions);
+    ActionGroup(ActionGroup actionGroup);
+</pre>
+
+<p>Also, <code>ActionGroup</code> provides access methods for setting or getting the actions after instantiation:</p>
+
+<pre>
+    void setActions(List actions);
+    List getActions();
+</pre>
+
+<p>In many agent-execution scenarios, several actions logically fit together.  That is, the actions could be inter-dependent in both time and operational side effects; thus, they must be executed in sequence.  Suppose there are two such sequentially executable action groups, but that due to their group-level independence it is perfectly appropriate for the groups to execute in parallel.  In this case, after combining the two actions groups into a higher level group, the higher level group could be configured for concurrent execution of its components, where each component is itself an action group.</p>
+
+<p>Because this type of execution scenario is common, the execution constraints must be configurable for each action group.  By default, actions are executed sequentially.  <code>ActionGroup</code> provides one method for configuring a group's execution order and one method for determining its order:</p>
+
+<pre>
+    void setConcurrent(boolean concurrent);
+    boolean getConcurrent();
+</pre>
+
+<p>Suppose we define several actions similar to the previously defined action and add some of them to groups:</p>
+
+<pre>
+    ...
+    private Action action1, action2;
+    private Vector groupActions = new Vector();
+    private ActionGroup actionGroup;
+      ...
+      action1 = new Action() {
+        public void execute() {
+          System.out.println("action 1...");
+        }
+      };
+      action2 = new Action() {
+        public void execute() {
+          System.out.println("action 2...");
+        }
+      };
+      ...
+      groupActions.add(new Action() {
+        public void execute() {
+          System.out.println("group action 1...");
+        }
+      });
+      groupActions.add(new Action() {
+        public void execute() {
+          System.out.println("group action 2...");
+        }
+      });
+      actionGroup = new ActionGroup(groupActions);
+      ...
+</pre>
+
+<p>By default, the anonymous actions of <code>actionGroup</code> will execute sequentially.  We could also define a higher level group that encapsulates the heterogeneous collection:</p>
+
+<pre>
+    ...
+    List moreActions = new ArrayList();
+    moreActions.add(action1);
+    moreActions.add(actionGroup);
+    moreActions.add(action2);
+    ActionGroup ag = new ActionGroup(moreActions);
+    ag.setConcurrent(true);
+    ...
+</pre>
+
+<p>This mixing of actions and action groups works fine because an action group is itself an action; that is, <code>ActionGroup</code> extends <code>Action</code>.  For the previous arrangement, because we enabled concurrent execution for the "outer" group, its three actions will execute concurrently in undetermined order.  One action, however, is an action group configured (by default) for sequential execution; thus, its subordinate actions will execute in order.  For this scenario, the displayed output from the actions could appear in several variations, for example,</p>
+
+<pre>
+  action 2...
+  group action 1...
+  group action 2...
+  action 1...
+</pre>
+
+<pre>
+  group action 1...
+  group action 2...
+  action 2...
+  action 1...
+</pre>
+
+<h3>Direct Execution of Action Groups</h3>
+
+<p>With actions and action groups it is fairly straightforward to organize a hierarchical arrangement of (nested) action groups, some configured for concurrent execution; others configured for sequential execution.  <code>ActionGroup</code> provides an <code>execute()</code> method that traverses the (top level) action group, executing each action or action group according to the current group's execution scheme.  For each action group encountered, the current action group launches the subordinate action group's <code>execute()</code> method.</p>
+
+<p>That is, simply by executing the top-level (root) action group, an application can trigger a depth-first execution scenario over the tree, for which each node is either a leaf (action) or a subtree (action group).  Thus, to initiate a depth-first execution, simply invoke <code>execute()</code>:</p>
+
+<pre>
+    rootActionGroup.execute();
+</pre>
+
+<p>Note that actions and action groups can be used to implement a HTN for hierarchical task analysis.  HTNs are sometimes used in AI planning schemes.</p>
+
+<h3>Scheduling Action Groups for Execution</h3>
+
+<p>A tree of <code>ActionGroup</code> instances provides a powerful organizational tool for many agent-execution scenarios.  On the other hand, this approach has limitations:</p>
+
+<ul>
+<li>Every action or action group is handled, in turn, based on a depth-first traversal
+<li>The entire tree execution is all or nothing
+<li>The factoring of tasks and arrangement into a HTN is "code-centric" and somewhat fragile
+<li>To properly handle the potentially concurrent operations, Yaak launches a thread for each action group
+</ul>
+
+<p>Note that due to the per-group thread allocation, Yaak action groups are relatively compute-intensive.  I plan to modify this design in an upcoming release, perhaps, with a thread-sharing scheme for action groups.</p>
+
+<p>For these reasons, Yaak provide a simple <code>Scheduler</code> interface.  Thus, an developer can implement this interface to define application-specific execution scenarios that support interruptions, as well as pause and resume operations.  Yaak provide a default implementation of <code>Scheduler</code>, namely, <code>ActionScheduler</code> that is suitable for many scenarios.</p>
+
+<p>Each <code>ActionScheduler</code> instance launches a Java thread to execute its assigned tasks.  This approach is necessary in order to support interruptions, as well as pause and resume operations.  A Java thread is definitely not a lightweight entity, so it is not a good idea to instantiate a lot of schedulers, especially on Windows platforms.  (Windows is a "multitasking dog"...)</p>
+
+<p>The following code segment creates a scheduler and schedules a modest amount of work:</p>
+
+<pre>
+    ...
+    ActionGroup ag = new ActionGroup();
+    ag.setConcurrent(true);
+    Vector someActions = new Vector();
+    someActions.add(new Action() {
+      public void execute() {
+        System.out.println("group action 1...");
+      }
+    });
+    someActions.add(new Action() {
+      public void execute() {
+        System.out.println("group action 2...");
+      }
+    });
+    ag.setActions(someActions);
+    Action action1 = new Action() {
+      public void execute() {
+        System.out.println("action 1...");
+      }
+    };
+    Action action2 = new Action() {
+      public void execute() {
+        System.out.println("action 2...");
+      }
+    };
+    ActionScheduler scheduler = new ActionScheduler();
+    scheduler.addAction(action1, 1);
+    scheduler.addAction(ag, 2);
+    scheduler.addAction(action2, 3);
+    scheduler.start();
+    ...
+</pre>
+
+<p>From a coding perspective, it is easier to add a heterogenous arrangement of actions and action groups to a scheduler than it is to organize a HTN using action groups.  Also, with a scheduler it is fairly straightforward to dynamically add, remove, and/or insert actions and actions groups.</p>
+
+<p>Note the second argument to <code>addAction()</code>, which provides the "tick" value.  A discussion of simulation models is beyond the scope of this tutorial, so please see a simulation textbook or an online source.  For our purposes, however, the tick represents an "execution event" in the scheduling process.  Ticks are ordinal, not interval, representations of the execution events placed under control of a scheduler.  Ticks do not have to be consecutive; the scheduler advances the tick executing events (actions) as encountered, ignoring unused ticks.  An action placed at a specific tick replaces any existing action (or action group) at that tick.</p>
+
+<p>Yaak's default scheduling capabilities are similar to, <em>although much less sophisticated than</em>, those provide by <a href="http://repast.sourceforge.net/">Repast</a>, originally developed at the University of Chicago and now available from SourceForge.net.  It is important to emphasize that Repast is a sophisticated agent-based simulation toolkit and its scheduling capabilities are infinitely more sophisticated than those of <code>ActionScheduler</code>.  For complex simulations, as well as real-world applications, please consider Repast or another simulation toolkit.  Also, Repast and Yaak are both Java frameworks and thus are compatible.</p>
+
+<h3>Actions and Agents</h3>
+
+<p>With Yaak, agent behavior, actions, action groups, and action schedulers can be combined in many ways.  For example, an agent could install an agent behavior object that launches and manages multiple action schedulers, each managing actions and action groups--all of the operations essentially encapsulated with the domain of a particular agent.  Or, following a more procedural model, an application could create various actions, group them, and schedule them, where each action maps directly to an agent's behavior.  And, it is less likely, but entirely possible, for an action group to instantiate and start an action scheduler.  Anything is possible...</p>
+
+<p>With these variations on associating actions and agent behaviors, what are mechanics for scheduling agents (perhaps, by a manager/delegator agent), each with encapsulated agent behavior?  The most straightforward approach, albeit somewhat procedural, is to create an action for each agent delegate (or service provider) and then schedule the actions, for example,</p>
+
+<pre>
+    ...
+    action1 = new Action() {
+      public void execute() {
+        agent1.run();
+      }
+    };
+    action2 = new Action() {
+      public void execute() {
+        agent2.run();
+      }
+    };
+    ...
+</pre>
+
+<p>From one perspective, scheduling tasks is by definition inherently procedural, so this approach could be appropriate in some contexts.  Yaak actually provides a convenience class, <code>SimAction</code>, which extends <code>Action</code> and can be useful for scheduling simulation actions performed by agents.  A <code>SimAction</code> instance simply encapsulates an agent registration and executes its <code>run()</code> method.</p>
+
+<h3>Yaak versus Other Frameworks</h3>
+
+<p>Yaak is very different from an agent framework such as <a href="http://jade.tilab.com/">JADE</a> that closely controls executable behaviors.  JADE provides several behavior classes, each of which can be extended to implement application-specific logic. These behavior objects can be registered with an agent, which then manages the execution of those tasks.  Multiple behaviors can be registered, yielding arbitrarily complex behavior; however, the JADE model often leads to continual case structure analysis.  Modern programming techniques discourage littering large applications with conditional execution logic; in fact, avoiding case structures was one of the early arguments for object-oriented programming paradigms.</p>
+
+<p>One advantage of JADE's behavioral paradigm is that it takes the behavior management out of the hands of the programmer and handles it behind the scenes.  In some situations, and for less-experienced programmers, this approach could be better than a more wide-open design (as with Yaak).  The JADE model, for example, protects the programmer from certain (but certainly not all) race-condition and critical-region issues that arise with multithreaded languages such as Java.</p>
+
+<p>In contrast, Yaak's philosophy toward multithreading issues is essentially the same as for Java.  That is, as a developer you are fully responsible for avoiding (or managing) potentially unpleasant interactions within critical regions, due to multiple concurrent threads of execution.  Yaak agents do <em>not</em> protect a developer from the possibility of two threads incorrectly modifying the same state data, encapsulated within an agent or otherwise.</p>
+
+<hr>
+<ul>
+<li><a href="./YaakAgentBehavior.html">Previous:  Agent Behavior</a>
+<li><a href="./YaakWorldModel.html">Next:  Agent World Model</a>
+</ul>
+
+<hr>
+<b><a href="../License.html">The Yaak Framework Software License</a></b>
+
+</body>
+</html>

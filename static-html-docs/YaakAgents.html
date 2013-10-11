@@ -1,0 +1,132 @@
+<html>
+<head>
+<title>Agents</title>
+</head>
+
+<body>
+<!--
+<body bgcolor="#D7CDC8">
+-->
+
+<table border="2" cellpadding="10" width=100%>
+<tr align=center>
+  <td><a href="../index.html">Yaak Home</a></td>
+  <td><a href="./YaakTutorial.html">Yaak Tutorial</a></td>
+  <td><a href="./api/index.html">Yaak API Docs</a></td>
+  <td><a href="./YaakAgentContexts.html">Previous: Agent Contexts</a></td>
+  <td><a href="./YaakAgentConfiguration.html">Next: Configurable Agents</a></td>
+</tr>
+</table>
+
+<h3>Agent Creation</h3>
+
+<p>We have mentioned that Yaak agents are relatively lightweight compared to agents in some frameworks, in part because</p>
+
+<ul>
+<li>Yaak transparently offloads much of an agent's work onto the container itself (the implementation of the context)
+<li>Yaak does not arbitrarily associate a Java thread with each agent
+</ul>
+
+<p>For example, when an agent sends a message, it (its core code) simply forwards the messaging on to the context, which provides layered communications services for messages and their payloads.  This approach whereby the substantial work is offloaded onto an agent's container contributes to the lightweight nature of agents (except for application-specific functionality) and exists throughout the framework.</p>
+
+<p>Agents typically define behaviors (high-level operations).  These operations can be formulated monolithically in terms of a prescribed execute method, much like a POJO that implements the <code>Runnable</code> interface.  Or, operations can be factored into actions (mini-tasks), organized into action groups according to sequential or parallel execution demands, and then executed directly (as with a  <code>Runnable</code> class), or placed under the control of a simple scheduler.  In each of the cases, however, the developer still chooses how and when to allocate threads to manage agents' collective operations.</p>
+
+<p>This section considers basic agent functionality, including life-cycle operations.  Subsequent sections explore agent behaviors in more depth.</p>
+
+<p>In previous sections we illustrated creating one or more agent contexts, as well as the one-step process for creating each agent within its designated context.  </p>
+
+<pre>
+    jupiter = AgentSystem.createAgentContext("Jupiter");
+    metis = jupiter.createAgent(MoonAgent.class, "Metis");
+    ...
+    adrastea = jupiter.createAgent(MoonAgent.class, "Adrastea");
+</pre>
+
+<p>An agent context also handles agent disposal, for example,</p>
+
+<pre>
+    jupiter.disposeAgent(adrastea);
+</pre>
+
+<p>In this example the agent's reference variable is used to designate the agent for disposal.  Developers are accustomed to operating in this manner, that is, by variable names.  It is also possible, however, to manage agents by their ID, via an instance of <code>AgentID</code>; thus, many methods are overloaded to provide multiple ways of working with agents.  The next operation disposes of <code>adrastea</code> by its ID.</p>
+
+<pre>
+    AgentID id = adrastea.getAgentID();
+    jupiter.disposeAgent(id);
+</pre>
+
+<p>Clearly, in this case it is easier simply to use the agent reference variable, but in some contexts you could be processing a list of agents by ID; hence, this alternate approach may be convenient in certain application contexts.</p>
+
+<h3><a name="AgentInitialization">Agent Creation and Initialization Arguments</h3>
+
+<p>The <code>createAgent()</code> method is overloaded in several ways.  So far, we have mentioned that you can create (instantiate) agents of a specific agent class by specifying either a string literal for the agent classname or a class literal.  Another option is specifying initialization arguments, which correspond roughly to constructor arguments for a POJO.  The method signature is:</p>
+
+<pre>
+    Agent createAgent(Class c, Object args, String agentName) throws AgentException;
+</pre>
+
+<p>As an example, consider the following agent class, which defines a string state variable initialized to a default value:</p>
+
+<pre>
+  public class MyTestAgent extends Agent {
+    private String testString = "nothing";
+
+    public void onCreation(Object args) {
+      this.testString = (String) args;
+    }
+
+    public String getTestString() {
+      return testString;
+    }
+    ...
+  }
+</pre>
+
+<p>Note the <code>onCreation()</code> method.  The fundamental <code>Agent</code> class provides an empty <code>onCreation()</code> method.  For each agent class definition, a developer can override the empty method to initialize an agent's state upon creation.  Note that the argument is an object, allowing you to design any type of argument passing scheme from simple objects to arrays, lists, and other structures.  In this case, <code>MyTestAgent</code> assumes that an instance of this class will receive an object (via the agent context), of type <code>java.lang.String</code>, with which it initializes the state variable <code>testString</code>.  Again, the initialization protocol could be anything, and typically would vary from one agent class definition to another.</p>
+
+<p>Given the previous agent class definition, we can create an agent (instance) with its internal state (for the above-mentioned variable) initialized to <code>"Initialization string."</code>.  First, consider the signature mentioned previously:</p>
+
+<pre>
+    Agent createAgent(Class c, Object args, String agentName) throws AgentException;
+</pre>
+
+<p>Given this signature, the creation and initialization operation is:</p>
+
+<pre>
+    ...
+    private String initString = "Initialization string.";
+      ...
+      try {
+        ...
+        agent = (MyTestAgent) context.createAgent(
+          MyTestAgent.class, initString, "MyFavoriteAgent");
+      }
+      catch (AgentException e) {
+        ...
+      }
+      ...
+      assertEquals("The initialization state has been set properly.",
+        agent.getTestString(), initString);
+</pre>
+
+<h3>Agent Disposal</h3>
+
+<p>As with the <code>onCreation()</code> method for handling initialization operations, <code>Agent</code> provides an empty <code>onDisposing()</code> method, which the developer can override to handle per-agent clean-up operations, if any.  For example, if an agent opens network sockets, files, database connections, or other system resources, <code>onDisposing()</code> provides a protocol for releasing those resources.  An agent's <code>onDisposing()</code> method is invoked immediately before the agent is purged from the agent context.</p>
+
+<h3>The Agent Paradigm</h3>
+
+<p>This section provides an initial glimpse of Yaak's agent paradigm.  Why are these lifecycle protocols necessary?  Why not just employ something equivalent to the <code>new</code> operator, plus a <code>delete</code> operator.  First, a Java-based agent framework is not a language and thus does not define operators.  Second, an agent is more than a POJO; it encapsulates internal state and operations, plus formally defined behavioral operations, as well as communications operations.</p>
+
+<p>Thus, even though Yaak agents are relatively lightweight, each agent must be "deployed" within a host context in order to provide ancillary services.  In the long run, these containment and other services enforce a powerful distributed computing paradigm that is more easily maintained due to its higher level structure than many "unharnessed" POJO-based applications designs, especially for asynchronous, event-oriented distributed applications.</p>
+
+<hr>
+<ul>
+<li><a href="./YaakAgentContexts.html">Previous:  Agent Contexts</a>
+<li><a href="./YaakAgentConfiguration.html">Next:  Configurable Agents</a>
+</ul>
+
+<hr>
+<b><a href="../License.html">The Yaak Framework Software License</a></b>
+
+</body>
+</html>

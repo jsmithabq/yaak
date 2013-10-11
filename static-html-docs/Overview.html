@@ -1,0 +1,202 @@
+<html>
+<head>
+  <title>Overview:  The Yaak Framework</title>
+</head>
+
+<body>
+<!--
+<body bgcolor="#D7CDC8">
+-->
+
+<center>
+
+<h2>Overview:  The Yaak Framework</h2>
+
+<p></p>
+
+<hr>
+<b><a href="../License.html">The Yaak Framework Software License</a></b>
+<hr>
+
+</center>
+
+<h3>The Yaak Framework</h3>
+
+<p>The Yaak framework is a lightweight technology for agent-based distributed computing.  The Yaak framework is similar to other agent frameworks, such as the Taco Framework, in that it provides classes and interfaces for event handling, agent creation and disposal, synchronous and asynchronous agent messaging, and other operations that support symmetric distributed computing.  Yaak promotes the same philosophy as my earliest agent framework, which was developed in the C language circa 1989.  Yaak's core functionality, however, is a direct derivative of a family of several agent frameworks dating back to 1996.  Thus, much of the functionality is based on ten years of development and testing.</p>
+
+<p>Yaak differs from previous frameworks of the same family in several ways:</p>
+
+<ul>
+<li>No support for mobility (mobile agents)
+<li>Significantly greater support for behavioral operations, actions, action groups, and action schedulers
+<li>Support for a simple discrete event modeling environment, which dovetails with the actor-, agent-, and action-based behavioral model
+<li>Significantly greater messaging capabilities including point-to-point (P2P) and publish/subscribe, as well as message filters
+<li>Automatic optimization of messaging operations among agent contexts within the same runtime environment
+<li>Dynamic discovery of agent-enabled sibling/peer applications
+<li>Truly pluggable communications services
+</ul>
+
+<p>With Yaak, the objectives and overall philosophy include the following:<p>
+
+<ul>
+<li>To maintain a relatively small, flexible, and hopefully, elegant, application programming interface (API)
+<li>To design an agent framework in the same small-tools spirit of many UNIX tools and programming languages such as C, Java, and Ruby
+<li>To avoid unnecessary bells and whistles in favor of more powerful core functionality
+<li>To provide agent-based programming support for skilled, creative developers with no big-brother mentality (especially, related to thread management)
+<li>To enable totally network transparent distribution of application components
+</ul>
+
+<p>Note that Yaak and its ancestors are philosophically very different from performative-based agent framework specifications such as the disjointed specifications from the <a href="http://www.fipa.org">Foundation for Intelligent Physical Agents</a> (FIPA).  The FIPA approach is derived, essentially, from 1980s artificial intelligence (AI) technology, for example, the performative approach to factoring a monolithic "code space." In my opinion, the FIPA philosophy is incompatible with modern software design and development practices.</p>
+
+<h3>Yaak Framework Infrastructure</h3>
+
+<p>The Yaak framework is a high-level framework built on top of core communications (transport) services.  The transport substrate, that is, the collection of low-level communications services, is totally pluggable.  Thus, a developer can create a new communications server, simply by (1) implementing the appropriate interface, as required by the messaging API, (2) including the communications server classes and/or JAR archive in the classpath, and (3) registering the entry point for the communications server class (the main Java class for the communications server) in the Yaak property file.  The default communications server is implemented with the Java Management Extensions (JMX) API.</p>
+
+<p>Yaak provides several higher level, programmatically powerful, distributed services, such as agent-based, asynchronous and synchronous messaging, and both P2P and publish/subscribe messaging.  Yaak's messaging services are agent-oriented (that is, agent-to-agent) and significantly easier to use than the Java Message Service (JMS).  With Yaak, applications do not require any form of manual set up of directory services, connections, topics, queues, or other JMS-like structures.  An agent simply sends a message and/or registers to receive messages.  The messaging services also support per-agent and per-agent context filters.  There are no arbitrary limits on a message's payload.  Using the default communications server, Yaak's messaging system is several times more efficient than the messaging functionality provided by several other agent frameworks.  Messaging performance is almost totally a function of a specific Java runtime environment's implementation of low-level network I/O.</p>
+
+<p>The Yaak framework is inherently application- and peer-oriented, and specifically not client/server-oriented.  We have used the term <i>symmetric distributed computing</i> since the 1980s to describe this type of balanced distribution of cooperating application components.  Thus, with Yaak, there is no hub-oriented server; see Figure 1.  For example, the first application that starts up probes the network for a sibling application (a type of peer).  If no cohort is located, communications services are started by the (currently lone) distributed application.  If a cohort is located, "pleasantries" are exchanged (co-registration of each other's agent contexts, and other activities), the existing communications services are shared, and the distributed applications can then communicate via agent-to-agent messaging.  This negotiation of symmetric services is transparent to the user <em>and</em> the application developer.</p>
+
+<center>
+  <br>
+  <img border="0" src="./images/YaakArchitecture.gif" align="middle">
+  <h4>Figure 1  The Yaak Architecture</h4>
+  <br>
+</center>
+
+<h3>Agents and Agent Contexts</h3>
+
+<p>Agents are not instantiated with the Java <code>new</code> operator.  Instead, an agent context is requested from Yaak's system services (consistent with the common factory design pattern):</p>
+
+<pre>
+    jupiter = AgentSystem.createAgentContext("Jupiter");
+</pre>
+
+<p>The agent context is then used to instantiate agents relative to that context:</p>
+
+<pre>
+    metis = jupiter.createAgent(MoonAgent.class, "Metis");
+    adrastea = jupiter.createAgent(MoonAgent.class, "Adrastea");
+</pre>
+
+<p>The agent context will only instantiate agent classes that extend <code>yaak.agent.Agent</code>.  That is, in the previous code segment, <code>MoonAgent</code> must extend/specialize <code>yaak.agent.Agent</code> (presumably by providing some form of planet-orbiting behavior); otherwise, the Yaak runtime environment will throw an exception.</p>
+
+<p>An application (Java runtime environment) creates as many agent contexts as necessary, each context managing a collection of agents.  Hence, the number of agent contexts, and the agents they manage, should be based entirely on application-specific issues.  Both agents and agent contexts are relatively lightweight.  Also, agent contexts can be nested.  The base agent class is very lightweight; subclasses, however, are only as light (or as heavy) as their class designs dictate.</p>
+
+<p>Yaak agents are relatively lightweight objects because much of the core functionality, for example, sending or receiving a message, is actually handled by (off-loaded to) the agent context.  It is part of the Yaak philosophy that an agent should be relatively lightweight so that an application is free to employ as many agents as dictated by application demands (within reasonable limits, of course).  In particular, unlike some frameworks, Yaak does <i>not</i> allocate a Java thread for each agent (which would certainly put each agent in the heavyweight category).  Likewise, agent contexts are relatively lightweight because they leverage the lower level communications services.</p>
+
+<p>Each agent context provides a container with associated (common) services, similar to an Enterprise JavaBean container, except that with Yaak each context manages multiple agents (via the shared services).  Yaak optimizes inter-agent communications within a context, as well as across multiple contexts within the same Java runtime environment.  That is, within the same application, messages are optimized behind the scenes as method calls instead of via network communications.</p>
+
+<h3>Agent Messaging</h3>
+
+<p>Figure 2 illustrates two distributed applications, including communications services, discovery services, and inter-agent messaging.</p>
+
+<center>
+  <br>
+  <img border="0" src="./images/InterAgentMessaging.gif" align="middle">
+  <h4>Figure 2  Distributed Applications with Yaak</h4>
+  <br>
+</center>
+
+<p>In the application on the left side of Figure 2, there are two agent contexts, <code>X</code> and <code>Y</code>.  (Agents and agent contexts use logical, application-relevant names.)  Each context includes multiple agents, for example, <code>x1</code>, <code>x2</code>, and so on for agent context <code>X</code>.</p>
+
+<p>Note that some components of the communications services are replicated within each agent-enabled application because each application must manage state data associated with its services, for example, tables that register the names of agent contexts in sibling applications.  For example, the leftmost application discovers (and registers an entry for) agent context <code>Z</code>, which is local to its sibling application depicted on the right side of Figure 2.  Likewise, the rightmost application discovers (and registers) agent contexts <code>X</code> and <code>Y</code>.</p>
+
+<p>Following these discovery and handshaking operations, each application is aware of all other agent contexts.  Note that each application is <i>not</i> aware of all agents in all applications--a discovery process that would be prohibitive, especially given Yaak's philosophy that applications should be free to create as many agents and agent contexts as necessary.  Thus, with Yaak, distributed applications must have a strategy for naming respective agents.  Note that this application-controlled naming scheme is consistent with the naming scheme for objects (variables) in any application.  The payoff for this approach (among experienced, creative developers) is extensive savings in computing efficiency and network traffic compared to Java Naming and Directory Interface-based (JNDI-based) management of every agent name.  The latter approach is prohibitive, for example, with distributed sensor networks in which there are thousands of agents distributed across many cooperating subnets.</p>
+
+<p>Figure 2 also illustrates the inter-agent messaging process.  Consider the first messaging operation, namely, <code>x1.sendMessage("y1@Y")</code>.  The messaging executive (part of the messaging substrate) detects that context <code>Y</code> is located within the same application (Java runtime environment).  This message must be "routed" from context <code>X</code> to context <code>Y</code>, but the executive optimizes the communication as a stack of method calls, avoiding network communications.  Consider the second messaging operation, namely, <code>y1.sendMessage("z1@Z")</code>.  The executive detects that context <code>Z</code> is located in a remote application; hence, the message is delivered via network communications services.</p>
+
+<p>Note that the behavior described in this section is not tied to any particular communications server.  As mentioned earlier, a developer can implement alternate communications servers (for example, optimized for wireless environments).  As long as the communications server satisfies the communications "contract," the agent-oriented messaging services can take place in a transparent and seamless manner.  (In Java parlance, the developer must implement the appropriate interfaces in the <code>yaak.agent.communications</code> package.)  This design is quite different from, say, an agent framework that simply supports multiple protocols, for example, <code>rmi</code> and <code>http</code> to accommodate firewall restrictions and other issues.  With Yaak, the communications layer is truly pluggable.</p>
+
+<h3>Designing Applications with the Yaak Framework</h3>
+
+<p>As mentioned, although agents are created using a factory design pattern, for example,</p>
+
+<pre>
+    europa = jupiter.createAgent(MoonAgent.class, "Europa");
+</pre>
+
+<p>they are not created and served from a remote location, or server.  That is, each application employs a locally available service object to instantiate the agent context, which then serves agents and provides other services such as agent disposal, inter-agent messaging, and discovery, as outlined in Figures 1 and 2.</p>
+
+<p>The Yaak framework is designed for distributed computing scenarios in which each distributed application component is expected (or at least exists in an environment in which it is common for components) to communicate with other application components in a pseudo event-driven manner, that is, asynchronously.  Yaak's asynchronous inter-agent messaging support provides this event-driven paradigm.  Thus, the Yaak programming model is similar to the JavaBean event and property-change model, except Yaak provides network-transparent inter-application programming via inter-agent events, whereas the JavaBean model limits the developer to intra-application event-driven programming.</p>
+
+<p>Note that although the <i>Enterprise</i> JavaBeans programming model does support inter-application communications, each JavaBean is a very heavyweight component/object and the support for asynchronous models is anything but elegant.  For this reason, there has been a significant degree of negative developer reaction to the Enterprise JavaBean programming model, along with several efforts toward lightweight alternatives (<a href="http://www-128.ibm.com/developerworks/java/library/os-lightweight5/">Lightweight Development</a>).</p>
+
+<p>Yaak provides a lightweight and symmetric alternative to asymmetric (server-centric) distributed models, but, of course, there are non-agent approaches as well.  We do not use the term middleware, primarily because organizations such as the <a href="http://www.sei.cmu.edu/str/descriptions/middleware.html">Carnegie Mellon Software Engineering Institute (SEI)</a> have forever corrupted any modern-day, meaningful usage of the term; many such organizations forever cling to traditional, asymmetric client/server system architectures.  Other organizations, however, have a considerably more modern interpretation of what constitutes middleware, for example, <a href="http://middleware.objectweb.org/">ObjectWeb.org</a>.</p>
+
+<p>Beyond asynchronous design patterns, Yaak's messaging services provide a convenient substitute for traditional inter-application (-client) messaging.  With Yaak, however, messages are sent and received by agents, not by plain old Java objects (POJOs), as with JMS-based applications.  With Yaak, the process for (1) creating two agent contexts, (2) creating one agent per context, and (3) registering one agent to receive messages is quite minimal, requiring only 14 lines of code, six of which provide the implementation for the message reception:</p>
+
+<pre>
+    jupiter = AgentSystem.createAgentContext("Jupiter");
+    saturn = AgentSystem.createAgentContext("Saturn");
+    try {
+      metis = jupiter.createAgent("MoonAgent", "Metis");
+      mimas = saturn.createAgent("MoonAgent", "Mimas");
+      mimas.registerForMessages(new MessageListener() {
+        public void onMessage(Message message) {
+          System.out.println(mimas.getAgentSelfAddressAsString() +
+            " received a message from " +
+            message.getSource().stringFormatAddress() + ": ");
+          System.out.println("" + message.getObject());
+        }
+      });
+    }
+    catch (AgentException e) {
+      ...
+    }
+</pre>
+
+<p>Sending a message to <code>Mimas</code> requires one line of code, plus exception handling:</p>
+
+<pre>
+    try {
+      metis.sendMessage("Mimas@Saturn", new Message("How are things around Saturn?"));
+    }
+    catch (CommunicationException e) {
+      ...
+    }
+</pre>
+
+<p>In many circumstances, this approach is considerably more elegant than employing JMS services, and does not require standalone message-oriented middleware (MOM), for example, a JMS server implementation.  On the other hand, Yaak's messaging system is not as sophisticated as JMS in terms of persistence, durable subscriptions, and transaction management.  However, as mentioned, any application developer can create and plug in a communications server that is optimized for the networking infrastructure, including automated support for durable subscriptions and persistence.  Note that one of my earlier frameworks (the Taco framework) actually used JMS to implement the communications substrate, but did not provide modular, pluggable communications services.</p>
+
+<p>Asynchronous, event-driven (message-driven) programming typically takes place in a multi-threaded programming paradigm.  With Yaak, agents are at the heart of messaging, as well as concurrent operations.  That is, if application components establish event-oriented "watches and triggers," it is convenient to assign event-triggered (and coordinated) operations to distinct execution sequences; see Figure 3.</p>
+
+<center>
+  <br>
+  <img border="0" src="./images/Concurrency.gif" align="middle">
+  <h4>Figure 3  Concurrent Operations with Yaak</h4>
+  <br>
+</center>
+
+<p>Yaak supports concurrent execution sequences via the package <code>yaak.sim.schedule</code>, which provides actions, action groups for bundling actions into serial- and parallel-executing groups, and a simple action scheduler for managing actions and groups.  With this model, the programmer (not the framework, as with <a href="http://jade.tilab.com/">JADE</a>) chooses when and where to allocate threads of execution, typically, assigning collecting actions and groups for execution via an action scheduler.</p>
+
+<p>Yaak supports agent- and actor-based behavior paradigms.  Thus, each agent's behavior(s) (if any) can be implemented in terms of actions and action groups, coordinated by an action scheduler.  Further, Yaak supports a simple discrete-event world model, which dovetails with the action-based execution model.  In particular, Yaak's simple discrete-event model provides a simple world model that supports further encapsulation of operations, which is convenient when modeling collectives, or community-based execution environments, for example, distributed sensor communities.</p>
+
+<h3>Summary</h3>
+
+<p>Yaak supports an event-driven, asynchronous style of software development for symmetrically distributed application components, each managing one or more agent contexts.  Yaak agents provide three core function areas:</p>
+
+<ul>
+<li>Inter-agent messaging
+  <ul>
+  <li>P2P messaging
+  <li>Publish/subscribe messaging
+  </ul>
+<li>Agent-, actor-, and action-based behavior paradigms
+  <ul>
+  <li>Actions
+  <li>Action groups
+  <li>Action schedulers
+  </ul>
+<li>Discrete event-based scheduling of agent-based operations
+  <ul>
+  <li>Discrete-event world model
+  <li>Simulation actions
+  </ul>
+</ul>
+
+<p>The primary objective with Yaak is to provide a relatively small, yet powerful, API that supports creative software developers.  Yaak does not hold the programmer's hand, and it specifically does not enforce highly restrictive execution models.</p>
+
+<br>
+
+</body>
+</html>

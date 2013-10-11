@@ -1,0 +1,87 @@
+<html>
+<head>
+<title>Yaak World Model</title>
+</head>
+
+<body>
+<!--
+<body bgcolor="#D7CDC8">
+-->
+
+<table border="2" cellpadding="10" width=100%>
+<tr align=center>
+  <td><a href="../index.html">Yaak Home</a></td>
+  <td><a href="./YaakTutorial.html">Yaak Tutorial</a></td>
+  <td><a href="./api/index.html">Yaak API Docs</a></td>
+  <td><a href="./YaakActionsAndGroups.html">Previous: Actions</a></td>
+  <td><a href="./YaakServiceArena.html">Next: Service Arenas</a></td>
+</tr>
+</table>
+
+<h3>Yaak World Model</h3>
+
+<p>This section presents functionality that is completely optional, specifically, a distributed model for organizing an agent-based domain environment.  The agent constructs presented in previous sections are entirely adequate for enabling a powerful approach to distributed computing based on event-driven programming, in which the <em>events</em> are manifested through the agent-oriented messaging paradigm.</p>
+
+<p>Using the agent constructs of previous sections, the developer can orchestrate distributed components that factor the distributed application tasks by major distributed components, and within those components, by contexts and agents with contexts.  This programming model supports a broad range of interaction complexity across distributed runtime environments.  The agent world model, however, provides another increment in agent constructs that can enhance the structure and organization of <em>highly distributed</em> applications such as distributed sensor networks.</p>
+
+<h3>Portability of Distributed Applications</h3>
+
+<p>Before considering Yaak's world model, consider one by-product of the overall Yaak model for agent-oriented software development.  Perhaps, the most important feature provided by Yaak is its facility for network node-transparent portability.  The Java programming language and its core APIs have been extremely important enabling technologies, in large part due to how they facilitate, or enable, (1) application portability and (2) network transparency.  In many cases, however, Java-based frameworks indirectly have introduced nonportability.  One of the objectives with Yaak is to maintain the spirit behind Java's portability and network transparency, but with respect to the agent world.</p>
+
+<p>For this reason, agents and agent contexts operate at a totally logical level.  Recall that names for agent and agent contexts are chosen much like variable names, based entirely on program logic.  This mechanism for agent and context identification departs from an earlier framework in the family (the Taco framework) that employed URLs to name contexts:</p>
+
+<pre>
+  taco://node.subdomain.domain/SomeAgentContext
+</pre>
+
+<p>The popularity and growth of the Internet, coupled with Java constructs for referencing Internet resources, perhaps, encouraged URL referencing schemes.  The problem, however, with using URLs to name distributed components (actually, the context[s] within each component) is that it ties the distributed application to specific network nodes.  The only way to avoid this nontransparency (hard-coding of URLs within an application) is for applications to specify the URLs for all application components in a configuration file.</p>
+
+<p>Although, technically, there is nothing wrong with the Taco framework's approach, Yaak's logical naming is superior because it completely eliminates the issue.  Every application and every application component is network transparent because (1) Yaak finds cooperating components via dynamic discovery, and (2) inter-application and inter-context referencing of agent contexts is completely dynamic.  The one disadvantage, perhaps, is that with URL-based context names, the Internet domain name model facilitates the avoidance of name conflicts.  However, the advantage gained from Yaak's total and seamless network transparency far outweighs any burden from choosing non-conflicting context names.</p>
+
+<p>For example, suppose a distributed application is divided into two components, <em>A</em> and <em>B</em>.  Next, suppose that each component has two contexts, <code>A1</code>, <code>A2</code>, <code>B1</code>, and <code>B2</code>, respectively.  It follows, then, that this distributed application can be moved transparently from machine to machine, for example, laptop computers used in field operations, without any concern for the Internet or intranet domain hierarchy of their current nodes.</p>
+
+<h3>The Agent World</h3>
+
+<p>The class <code>yaak.model.World</code> provides a dynamic container for organizing and managing transparently distributed application components.  For each distributed application, the developer specialized the base <code>World</code> to implement a domain-specific environment, for example, a distributed sensor network for monitoring environmental conditions in environments such as national forests, wildlife preserves, public venues to monitor potential chemical weapon attacks, and other possible applications.</p>
+
+<p>Currently, the Yaak world model provides methods for setting up an environment to model an application domain, along with activating and deactivating its operations.  Domain-related agents are instantiated from specialization of <code>yaak.agent.Agent</code>.  Likewise, domain-related worlds are instantiated from specializations of <code>yaak.model.World</code>.  Unlike with agents, however, a domain world is instantiated directly.  Currently, this environment is rather spartan, but it will be extended in future software releases.  First, the constructor must be specialized for domain-related worlds:</p>
+
+<pre>
+  protected World() {
+  }
+</pre>
+
+<p>The domain world should provide for initialization of encapsulated services, which can be extended to include domain-specific set-up operations:</p>
+
+<pre>
+  public ServiceArena initServices(String agentContextName,
+      String serviceArenaName) {
+    ...
+  }
+</pre>
+
+<p>The Yaak model is still under development, but currently the public signatures include:</p>
+
+<pre>
+  ServiceArena initServices(String agentContextName, String serviceArenaName);
+  AgentContext getAgentContext();
+  ServiceArena getServiceArena();
+  void activate();
+  void deactivate();
+</pre>
+
+<p><code>yaak.model.World</code> provides one encapsulated primary agent context, along with one primary <a href="./YaakServiceArena.html">service arena</a>, which is discussed in the next section.  Thus, by extending <code>yaak.model.World</code> an application gains an encapsulated agent context and a service arena for registration and delegation of agent services.</p>
+
+<p>Each application domain potentially varies greatly; hence, the world model must be rather generic.  Moreover, much of the power gained from modeling a domain through the world "context" comes from the encapsulated agent context and service arena.  Thus, as described earlier, although the world model is clearly optional for modeling domain-specific operations, it provides a class-specialization approach to organization of each domain implementation.</p>
+
+<hr>
+<ul>
+<li><a href="./YaakActionsAndGroups.html">Previous:  Actions</a>
+<li><a href="./YaakServiceArena.html">Next:  Service Arenas</a>
+</ul>
+
+<hr>
+<b><a href="../License.html">The Yaak Framework Software License</a></b>
+
+</body>
+</html>
