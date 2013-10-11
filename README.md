@@ -1,8 +1,19 @@
 Yaak Agent Framework
 --------------------
 
-This framework is in the initial stages of development.
+A context-based Java messaging framework
 
+Summary
+-------
+
+Yaak is an agent- and context-based messaging framework.  Agent
+contexts are fully nestable.
+
+Todo
+----
+
+Yaak's dynamic discover capabilities for other sibling applications
+requires additional work.
 
 Agent Communication
 -------------------
